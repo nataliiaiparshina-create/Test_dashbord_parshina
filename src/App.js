@@ -6,6 +6,7 @@ import DonutChart from './components/DonutChart';
 import LossPareto from './components/LossPareto';
 import Heatmap from './components/Heatmap';
 import PeriodComparison from './components/PeriodComparison';
+import AIPanel from './components/AIPanel';
 import { mockData, LINES, SHIFTS } from './data/mockData';
 
 function App() {
@@ -99,6 +100,7 @@ function App() {
           <LossPareto data={filteredData} />
           <PeriodComparison data={mockData} />
           <Heatmap data={mockData} />
+<AIPanel data={filteredData} />
         </div>
       </main>
     </div>
