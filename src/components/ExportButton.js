@@ -54,7 +54,7 @@ export default function ExportButton({ data }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `OEE_PharmaLine_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `OEE_PharmaLine_${new Date().toISOString().slice(0, 10)}_${data.length}_записей.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
