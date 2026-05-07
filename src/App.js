@@ -7,6 +7,7 @@ import LossPareto from './components/LossPareto';
 import Heatmap from './components/Heatmap';
 import PeriodComparison from './components/PeriodComparison';
 import AIPanel from './components/AIPanel';
+import Simulator from './components/Simulator';
 import { mockData, LINES, SHIFTS } from './data/mockData';
 
 function App() {
@@ -101,6 +102,7 @@ function App() {
           <PeriodComparison data={mockData} />
           <Heatmap data={mockData} />
 <AIPanel data={filteredData} />
+<Simulator data={filteredData} />
         </div>
       </main>
     </div>
