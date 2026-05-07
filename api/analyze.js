@@ -1,13 +1,14 @@
 // Vercel Serverless Function: AI-анализ через OpenRouter.
-// При ошибке возвращает структурированный JSON, чтобы клиент мог показать
-// человеческое сообщение и при необходимости включить локальный фоллбэк.
+// Поддерживает два режима:
+// 1) Стандартная диагностика — body: { data }
+// 2) Q&A — body: { data, userQuestion } → AI отвечает на конкретный вопрос
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { data } = req.body || {};
+  const { data, userQuestion } = req.body || {};
 
   if (!process.env.OPENROUTER_API_KEY) {
     return res.status(500).json({
@@ -16,7 +17,17 @@ export default async function handler(req, res) {
     });
   }
 
-  const prompt = `Ты AI-аналитик OEE для фармацевтической компании PharmaLine.
+  // Промпт зависит от режима
+  let prompt;
+  if (userQuestion) {
+    prompt = `Ты AI-аналитик OEE для фармацевтической компании PharmaLine.
+Вот сводные данные производства за выбранный период: ${JSON.stringify(data)}
+
+Пользователь спрашивает: "${userQuestion}"
+
+Ответь конкретно и по делу, на русском, опираясь на цифры из данных. Не более 4 предложений. Если для ответа недостаточно данных — скажи прямо. Не используй markdown, отвечай простым текстом.`;
+  } else {
+    prompt = `Ты AI-аналитик OEE для фармацевтической компании PharmaLine.
 Проанализируй данные производства и верни ТОЛЬКО валидный JSON без markdown.
 
 Данные: ${JSON.stringify(data)}
@@ -28,6 +39,7 @@ export default async function handler(req, res) {
   "priorities": [{"rank": 1, "action": "...", "expected_oee_gain": "...", "gmp_risk": "низкий/средний/высокий"}],
   "summary": "..."
 }`;
+  }
 
   let response;
   try {
@@ -39,7 +51,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'anthropic/claude-sonnet-4-5',
-        max_tokens: 1000,
+        max_tokens: userQuestion ? 500 : 1000,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -48,17 +60,15 @@ export default async function handler(req, res) {
     return res.status(502).json({
       error: 'network',
       message: 'Не удалось соединиться с OpenRouter API',
-      details: String(networkErr && networkErr.message || networkErr),
+      details: String((networkErr && networkErr.message) || networkErr),
     });
   }
 
-  // Проверяем HTTP-статус ДО парсинга
   if (!response.ok) {
     let body;
     try { body = await response.json(); } catch { body = await response.text().catch(() => ''); }
     console.error('OpenRouter error:', response.status, body);
 
-    // Маппинг статусов на понятные пользователю сообщения
     const statusMessages = {
       401: 'Недействительный токен OpenRouter',
       402: 'Закончились кредиты OpenRouter — пополните баланс',
@@ -77,7 +87,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // Ответ получен — пробуем разобрать
   let result;
   try {
     result = await response.json();
@@ -95,7 +104,12 @@ export default async function handler(req, res) {
     });
   }
 
-  // Очищаем от возможных ```json fences и парсим
+  // Q&A режим — возвращаем текст
+  if (userQuestion) {
+    return res.status(200).json({ answer: text.trim() });
+  }
+
+  // Диагностика — парсим JSON
   const clean = text.replace(/```json|```/g, '').trim();
   let parsed;
   try {

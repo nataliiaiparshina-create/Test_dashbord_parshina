@@ -1,40 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { computeFallbackAnalysis } from '../utils/fallbackAnalysis';
 
+const SUGGESTED_QUESTIONS = [
+  'Почему Линия В отстаёт?',
+  'Что улучшить в первую очередь?',
+  'Где главные потери в деньгах?',
+  'Какие риски для GMP?',
+];
+
 export default function AIPanel({ data, periodLabel }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [errorInfo, setErrorInfo] = useState(null); // { message, details } | null
+  const [errorInfo, setErrorInfo] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
+
+  // Q&A state
+  const [askInput, setAskInput] = useState('');
+  const [askLoading, setAskLoading] = useState(false);
+  const [askResult, setAskResult] = useState(null); // { question, answer, error? }
+
+  const buildSummary = () => ({
+    avgOEE: Math.round(data.reduce((s, r) => s + r.OEE, 0) / data.length * 100),
+    avgA: Math.round(data.reduce((s, r) => s + r.A, 0) / data.length * 100),
+    avgP: Math.round(data.reduce((s, r) => s + r.P, 0) / data.length * 100),
+    avgQ: Math.round(data.reduce((s, r) => s + r.Q, 0) / data.length * 100),
+    totalDefects: data.reduce((s, r) => s + r.defects, 0),
+    totalDowntime: data.reduce((s, r) => s + r.downtime, 0),
+    worstLine: ['Линия А', 'Линия Б', 'Линия В'].map(line => {
+      const f = data.filter(r => r.line === line);
+      return { line, oee: f.length ? Math.round(f.reduce((s, r) => s + r.OEE, 0) / f.length * 100) : 0 };
+    }).sort((a, b) => a.oee - b.oee)[0],
+  });
 
   const analyze = async () => {
     setLoading(true);
     setErrorInfo(null);
     try {
-      const summary = {
-        avgOEE: Math.round(data.reduce((s, r) => s + r.OEE, 0) / data.length * 100),
-        avgA: Math.round(data.reduce((s, r) => s + r.A, 0) / data.length * 100),
-        avgP: Math.round(data.reduce((s, r) => s + r.P, 0) / data.length * 100),
-        avgQ: Math.round(data.reduce((s, r) => s + r.Q, 0) / data.length * 100),
-        totalDefects: data.reduce((s, r) => s + r.defects, 0),
-        totalDowntime: data.reduce((s, r) => s + r.downtime, 0),
-        worstLine: ['Линия А', 'Линия Б', 'Линия В'].map(line => {
-          const f = data.filter(r => r.line === line);
-          return { line, oee: f.length ? Math.round(f.reduce((s, r) => s + r.OEE, 0) / f.length * 100) : 0 };
-        }).sort((a, b) => a.oee - b.oee)[0],
-      };
-
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: summary }),
+        body: JSON.stringify({ data: buildSummary() }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
-        // Бекенд вернул структурированную ошибку — показываем её и включаем фоллбэк
         const fallback = computeFallbackAnalysis(data);
         setAnalysis(fallback);
         setErrorInfo({
@@ -42,13 +51,11 @@ export default function AIPanel({ data, periodLabel }) {
           details: result.details || '',
           status: response.status,
         });
-        setUpdatedAt(new Date());
       } else {
         setAnalysis(result);
-        setUpdatedAt(new Date());
       }
+      setUpdatedAt(new Date());
     } catch (err) {
-      // Сетевая ошибка / клиентская — фоллбэк
       const fallback = computeFallbackAnalysis(data);
       setAnalysis(fallback);
       setErrorInfo({
@@ -61,6 +68,43 @@ export default function AIPanel({ data, periodLabel }) {
   };
 
   useEffect(() => { analyze(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const askAI = async (question) => {
+    if (!question || !question.trim()) return;
+    setAskLoading(true);
+    setAskResult({ question: question.trim(), answer: null });
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: buildSummary(), userQuestion: question.trim() }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setAskResult({
+          question: question.trim(),
+          error: result.message || `Ошибка ${response.status}`,
+        });
+      } else {
+        setAskResult({
+          question: question.trim(),
+          answer: result.answer || 'AI вернул пустой ответ.',
+        });
+      }
+    } catch (err) {
+      setAskResult({
+        question: question.trim(),
+        error: 'Сетевая ошибка. Попробуйте ещё раз.',
+      });
+    }
+    setAskLoading(false);
+    setAskInput('');
+  };
+
+  const handleAskSubmit = (e) => {
+    if (e) e.preventDefault();
+    askAI(askInput);
+  };
 
   const isFallback = analysis && analysis._fallback === true;
 
@@ -234,7 +278,7 @@ export default function AIPanel({ data, periodLabel }) {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Выявленные проблемы</div>
               {analysis.bottlenecks?.map((b, i) => (
@@ -296,6 +340,118 @@ export default function AIPanel({ data, periodLabel }) {
                 </div>
               )}
             </div>
+          </div>
+
+          <div style={{
+            background: 'rgba(108,143,255,0.05)',
+            border: '1px solid rgba(108,143,255,0.2)',
+            borderRadius: 10,
+            padding: 14,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 6,
+                background: 'rgba(108,143,255,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#6c8fff', fontSize: 12,
+              }}>💬</div>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)' }}>Спросить AI</span>
+              <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+                Выберите вопрос или задайте свой
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+              {SUGGESTED_QUESTIONS.map(q => (
+                <button
+                  key={q}
+                  onClick={() => askAI(q)}
+                  disabled={askLoading}
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 8,
+                    padding: '10px 12px',
+                    color: 'var(--text-secondary)',
+                    fontSize: 12,
+                    textAlign: 'left',
+                    cursor: askLoading ? 'not-allowed' : 'pointer',
+                    opacity: askLoading ? 0.5 : 1,
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!askLoading) e.currentTarget.style.borderColor = 'rgba(108,143,255,0.4)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleAskSubmit} style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={askInput}
+                onChange={e => setAskInput(e.target.value)}
+                placeholder="Свой вопрос про производство..."
+                disabled={askLoading}
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8,
+                  padding: '0 12px',
+                  color: 'var(--text)',
+                  fontSize: 12,
+                  height: 36,
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={askLoading || !askInput.trim()}
+                style={{
+                  background: '#6c8fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '0 18px',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: (askLoading || !askInput.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (askLoading || !askInput.trim()) ? 0.5 : 1,
+                  height: 36,
+                }}
+              >
+                {askLoading ? '...' : 'Спросить'}
+              </button>
+            </form>
+
+            {askResult && (
+              <div style={{
+                marginTop: 12,
+                padding: 12,
+                background: 'rgba(255,255,255,0.03)',
+                borderRadius: 8,
+                borderLeft: '3px solid #6c8fff',
+              }}>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                  Вопрос: <span style={{ color: 'var(--text-secondary)' }}>{askResult.question}</span>
+                </div>
+                {askLoading && askResult.answer === null && !askResult.error && (
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>AI думает...</div>
+                )}
+                {askResult.answer && (
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {askResult.answer}
+                  </div>
+                )}
+                {askResult.error && (
+                  <div style={{ fontSize: 12, color: '#ffb347' }}>
+                    Не удалось получить ответ: {askResult.error}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}

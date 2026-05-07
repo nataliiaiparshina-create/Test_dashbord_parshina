@@ -91,6 +91,7 @@ function App() {
   const [selectedSKU, setSelectedSKU] = useState('Все SKU');
   const [selectedPeriodKey, setSelectedPeriodKey] = useState('last7');
   const [theme, setTheme] = useState('dark');
+  const [activeGroupBy, setActiveGroupBy] = useState('line'); // 'line' | 'shift' | 'sku'
 
   const periodOptions = useMemo(() => buildPeriodOptions(new Date()), []);
   const currentPeriod = periodOptions.find(p => p.key === selectedPeriodKey) || periodOptions[0];
@@ -149,7 +150,25 @@ function App() {
             <h1>Общий обзор</h1>
             <p>Сводная аналитика эффективности производства</p>
           </div>
-          <div className="topbar-filters">
+<div className="topbar-filters">
+            <span
+              title="Источники данных: простои, фактическая скорость, выпуск, брак/переработка. Демо-набор."
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                background: 'rgba(108,143,255,0.12)',
+                border: '1px solid rgba(108,143,255,0.3)',
+                color: '#6c8fff',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'help',
+                marginRight: 4,
+              }}
+            >i</span>
             <select
               value={selectedPeriodKey}
               onChange={e => setSelectedPeriodKey(e.target.value)}
@@ -189,23 +208,47 @@ function App() {
           <Alerts />
           <KPICards data={filteredData} selectedLine={selectedLine} selectedShift={selectedShift} />
 
-          <div style={sectionLabelStyle}>OEE по линиям — A / P / Q</div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, marginTop: 24 }}>
+            <span style={sectionLabelStyle}>OEE — A / P / Q</span>
+            <div style={{
+              display: 'inline-flex',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10,
+              padding: 3,
+              marginLeft: 'auto',
+            }}>
+              {[
+                { id: 'line', label: 'По линиям' },
+                { id: 'shift', label: 'По сменам' },
+                { id: 'sku', label: 'По SKU' },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveGroupBy(item.id)}
+                  style={{
+                    background: activeGroupBy === item.id ? '#6c8fff' : 'transparent',
+                    border: 'none',
+                    borderRadius: 7,
+                    padding: '7px 18px',
+                    color: activeGroupBy === item.id ? '#fff' : '#9ca0ac',
+                    fontSize: 12,
+                    fontWeight: activeGroupBy === item.id ? 500 : 400,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s',
+                  }}
+                >{item.label}</button>
+              ))}
+            </div>
+          </div>
           <div style={gridStyle}>
-            {LINES.map(line => (
+            {activeGroupBy === 'line' && LINES.map(line => (
               <DonutChart key={line} line={line} data={filteredData} />
             ))}
-          </div>
-
-          <div style={sectionLabelStyle}>OEE по сменам — A / P / Q</div>
-          <div style={gridStyle}>
-            {SHIFTS.map(shift => (
+            {activeGroupBy === 'shift' && SHIFTS.map(shift => (
               <DonutChart key={shift} line={shift} data={filteredData} />
             ))}
-          </div>
-
-          <div style={sectionLabelStyle}>OEE по SKU — A / P / Q</div>
-          <div style={gridStyle}>
-            {SKUS.map(sku => (
+            {activeGroupBy === 'sku' && SKUS.map(sku => (
               <DonutChart key={sku} line={sku} data={filteredData} />
             ))}
           </div>
