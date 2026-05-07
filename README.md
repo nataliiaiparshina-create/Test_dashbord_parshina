@@ -1,70 +1,64 @@
-# Getting Started with Create React App
+# PharmaLine OEE Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+AI-дашборд для мониторинга эффективности производственного оборудования (OEE) фармацевтической компании PharmaLine.
 
-## Available Scripts
+## 🔗 Ссылки
 
-In the project directory, you can run:
+- **Приложение:** https://test-dashbord-parshina.vercel.app
+- **Репозиторий:** https://github.com/nataliiaiparshina-create/Test_dashbord_parshina
 
-### `npm start`
+## 📋 Описание
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Дашборд рассчитывает и визуализирует OEE (Overall Equipment Effectiveness) — ключевой показатель эффективности производства. OEE = Доступность (A) × Производительность (P) × Качество (Q).
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Контекст: фармацевтическая компания полного цикла, 3 производственные линии, 3 смены, 3 SKU.
 
-### `npm test`
+## ✨ Функциональность
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **KPI карточки** — OEE, A, P, Q с отклонениями от плана и алертами
+- **Алерты** — Critical / Warning / Info с описанием проблемы
+- **OEE по линиям** — donut-диаграммы с детализацией A/P/Q
+- **OEE по SKU** — donut-диаграммы по каждой товарной позиции
+- **Дерево потерь** — Pareto причин простоев и дефектов по SKU
+- **Сравнение периодов** — неделя к неделе с линейным графиком
+- **Heatmap смен** — тепловая карта OEE по линиям, сменам и дням
+- **AI-диагностика** — причина → эффект → рекомендация (OpenRouter API)
+- **Симулятор "Что если"** — расчёт финансового эффекта от улучшения показателей
+- **Финансовый блок** — потери от простоев, брака и переработки
+- **Экспорт CSV** — сводки по линиям, сменам, SKU и детальные данные
+- **Фильтры** — по периоду, линии, смене, SKU
+- **Переключатель тем** — тёмная / светлая
 
-### `npm run build`
+## 🏗 Архитектура
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Frontend (React) + Backend (Vercel Serverless Functions)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `src/components/` — все компоненты дашборда
+- `src/data/mockData.js` — синтетические данные (810 записей)
+- `api/analyze.js` — бэк для AI (токен скрыт на сервере)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🤖 AI интеграция
 
-### `npm run eject`
+- Модель: claude-sonnet-4-5 через OpenRouter API
+- Токен хранится на бэке в Vercel Environment Variables
+- При загрузке AI анализирует данные автоматически
+- Кнопка "Обновить данные" — новый запрос к AI
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 📊 Данные
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3 линии × 3 смены × 30 дней × 3 SKU = 810 записей. Реалистичные паттерны: ночная смена хуже, Линия В — проблемная, Инъекции 10мл — наибольший брак.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🛠 Стек
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+React, Recharts, Vercel Serverless Functions, OpenRouter API (claude-sonnet-4-5)
 
-## Learn More
+## 🚀 Запуск
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm install
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 👤 Автор
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Наталия Паршина — UX/UI Designer

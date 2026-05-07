@@ -2,7 +2,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 export default function DonutChart({ line, data }) {
-  const filtered = data.filter(r => r.line === line);
+  const filtered = data.filter(r => r.line === line || r.sku === line || r.shift === line);
   if (!filtered.length) return null;
 
   const avg = key => filtered.reduce((s, r) => s + r[key], 0) / filtered.length;

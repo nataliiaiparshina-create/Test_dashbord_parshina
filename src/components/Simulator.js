@@ -9,10 +9,17 @@ export default function Simulator({ data }) {
   const [result, setResult] = useState(null);
 
   const calculate = () => {
-    const gain = Math.round(avgOEE * (percent / 100));
-    const newOEE = Math.min(avgOEE + gain, 95);
+    const avgA = Math.round(data.reduce((s, r) => s + r.A, 0) / data.length * 100);
+const avgP = Math.round(data.reduce((s, r) => s + r.P, 0) / data.length * 100);
+const avgQ = Math.round(data.reduce((s, r) => s + r.Q, 0) / data.length * 100);
+const newA = param === 'Доступность (A)' ? Math.min(avgA + percent, 100) / 100 : avgA / 100;
+const newP = param === 'Производительность (P)' ? Math.min(avgP + percent, 100) / 100 : avgP / 100;
+const newQ = param === 'Качество (Q)' ? Math.min(avgQ + percent, 100) / 100 : avgQ / 100;
+const newOEEValue = Math.round(newA * newP * newQ * 100);
+const gain = newOEEValue - avgOEE;
+    const newOEE = newOEEValue;
     const extraOutput = Math.round(gain * 2500);
-    const economicEffect = Math.round(gain * 3780);
+   const economicEffect = Math.round(gain * 380000);
     setResult({ newOEE, extraOutput, economicEffect, gain });
   };
 

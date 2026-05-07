@@ -107,6 +107,14 @@ function App() {
           </div>
 
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+  OEE по сменам — A / P / Q
+</div>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+  {SHIFTS.map(shift => (
+    <DonutChart key={shift} line={shift} data={filteredData} />
+  ))}
+</div>
             OEE по SKU — A / P / Q
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
