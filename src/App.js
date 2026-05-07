@@ -214,8 +214,10 @@ function App() {
           <PeriodComparison data={mockData} />
           <Heatmap data={filteredData} />
           <AIPanel data={filteredData} periodLabel={currentPeriod.label} />
-          <Simulator data={filteredData} />
-          <FinancialBlock data={filteredData} />
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, alignItems: 'stretch' }}>
+            <FinancialBlock data={filteredData} periodLabel={currentPeriod && currentPeriod.label.split('(')[1]?.replace(')', '')} />
+            <Simulator data={filteredData} />
+          </div>
         </div>
       </main>
     </div>
