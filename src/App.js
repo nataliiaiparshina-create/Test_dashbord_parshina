@@ -9,18 +9,21 @@ import PeriodComparison from './components/PeriodComparison';
 import AIPanel from './components/AIPanel';
 import Simulator from './components/Simulator';
 import FinancialBlock from './components/FinancialBlock';
-import { mockData, LINES, SHIFTS } from './data/mockData';
+import ExportButton from './components/ExportButton';
+import { mockData, LINES, SHIFTS, SKUS } from './data/mockData';
 
 function App() {
   const [activePage, setActivePage] = useState('overview');
   const [selectedLine, setSelectedLine] = useState('Все линии');
   const [selectedShift, setSelectedShift] = useState('Все смены');
+  const [selectedSKU, setSelectedSKU] = useState('Все SKU');
   const [selectedPeriod, setSelectedPeriod] = useState('Последние 7 дней');
   const [theme, setTheme] = useState('dark');
 
   const filteredData = mockData.filter(r => {
     if (selectedLine !== 'Все линии' && r.line !== selectedLine) return false;
     if (selectedShift !== 'Все смены' && r.shift !== selectedShift) return false;
+    if (selectedSKU !== 'Все SKU' && r.sku !== selectedSKU) return false;
     return true;
   });
 
@@ -79,7 +82,11 @@ function App() {
               <option>Все линии</option>
               {LINES.map(l => <option key={l}>{l}</option>)}
             </select>
-            <button className="export-btn">⬇ Экспорт CSV</button>
+            <select value={selectedSKU} onChange={e => setSelectedSKU(e.target.value)}>
+              <option>Все SKU</option>
+              {SKUS.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <ExportButton data={filteredData} />
             <button className="theme-btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
@@ -89,7 +96,7 @@ function App() {
         <div className="content">
           <Alerts />
           <KPICards data={mockData} selectedLine={selectedLine} selectedShift={selectedShift} />
-          
+
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
             OEE по линиям — A / P / Q
           </div>
@@ -99,12 +106,21 @@ function App() {
             ))}
           </div>
 
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            OEE по SKU — A / P / Q
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+            {SKUS.map(sku => (
+              <DonutChart key={sku} line={sku} data={filteredData} />
+            ))}
+          </div>
+
           <LossPareto data={filteredData} />
           <PeriodComparison data={mockData} />
           <Heatmap data={mockData} />
-<AIPanel data={filteredData} />
-<Simulator data={filteredData} />
-<FinancialBlock data={filteredData} />
+          <AIPanel data={filteredData} />
+          <Simulator data={filteredData} />
+          <FinancialBlock data={filteredData} />
         </div>
       </main>
     </div>
