@@ -175,14 +175,30 @@ body {
 .topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 24px;
+  padding: 12px 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
+  justify-content: flex-start;
   flex-shrink: 0;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.topbar-title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 20px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  flex: 1;
+}
+
+.topbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
 }
 
 .topbar h1 {
