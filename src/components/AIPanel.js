@@ -53,7 +53,7 @@ export default function AIPanel({ data, periodLabel }) {
       setAnalysis(fallback);
       setErrorInfo({
         message: 'Сетевая ошибка — не удалось связаться с сервером',
-        details: String(err && err.message || err),
+        details: String((err && err.message) || err),
       });
       setUpdatedAt(new Date());
     }
