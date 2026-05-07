@@ -8,6 +8,7 @@ import Heatmap from './components/Heatmap';
 import PeriodComparison from './components/PeriodComparison';
 import AIPanel from './components/AIPanel';
 import Simulator from './components/Simulator';
+import FinancialBlock from './components/FinancialBlock';
 import { mockData, LINES, SHIFTS } from './data/mockData';
 
 function App() {
@@ -103,6 +104,7 @@ function App() {
           <Heatmap data={mockData} />
 <AIPanel data={filteredData} />
 <Simulator data={filteredData} />
+<FinancialBlock data={filteredData} />
         </div>
       </main>
     </div>
