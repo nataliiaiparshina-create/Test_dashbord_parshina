@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import './App.css';
 import Alerts from './components/Alerts';
 import KPICards from './components/KPICards';
+import DonutChart from './components/DonutChart';
+import LossPareto from './components/LossPareto';
+import Heatmap from './components/Heatmap';
+import PeriodComparison from './components/PeriodComparison';
 import { mockData, LINES, SHIFTS } from './data/mockData';
 
 function App() {
@@ -10,6 +14,12 @@ function App() {
   const [selectedShift, setSelectedShift] = useState('Все смены');
   const [selectedPeriod, setSelectedPeriod] = useState('Последние 7 дней');
   const [theme, setTheme] = useState('dark');
+
+  const filteredData = mockData.filter(r => {
+    if (selectedLine !== 'Все линии' && r.line !== selectedLine) return false;
+    if (selectedShift !== 'Все смены' && r.shift !== selectedShift) return false;
+    return true;
+  });
 
   return (
     <div className={`app ${theme}`}>
@@ -76,6 +86,19 @@ function App() {
         <div className="content">
           <Alerts />
           <KPICards data={mockData} selectedLine={selectedLine} selectedShift={selectedShift} />
+          
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+            OEE по линиям — A / P / Q
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+            {LINES.map(line => (
+              <DonutChart key={line} line={line} data={filteredData} />
+            ))}
+          </div>
+
+          <LossPareto data={filteredData} />
+          <PeriodComparison data={mockData} />
+          <Heatmap data={mockData} />
         </div>
       </main>
     </div>
