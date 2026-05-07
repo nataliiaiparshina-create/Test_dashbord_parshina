@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './App.css';
 import Alerts from './components/Alerts';
 import KPICards from './components/KPICards';
@@ -27,20 +27,85 @@ const gridStyle = {
   marginBottom: 20,
 };
 
+const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const MONTHS_FULL = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+
+function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function fmtShort(d) { return `${d.getDate()} ${MONTHS[d.getMonth()]}`; }
+function isoLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// ISO-неделя (понедельник = первый день; неделя 1 содержит первый четверг года)
+function isoWeek(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function startOfWeek(d) {
+  const x = startOfDay(d);
+  const dayNum = x.getDay() || 7; // 1..7, Mon=1
+  x.setDate(x.getDate() - (dayNum - 1));
+  return x;
+}
+
+function buildPeriodOptions(today) {
+  const t = startOfDay(today);
+
+  const last7From = addDays(t, -6);
+  const last30From = addDays(t, -29);
+
+  const thisWeekFrom = startOfWeek(t);
+  const thisWeekTo = addDays(thisWeekFrom, 6);
+
+  const lastWeekFrom = addDays(thisWeekFrom, -7);
+  const lastWeekTo = addDays(thisWeekFrom, -1);
+
+  const thisMonthFrom = new Date(t.getFullYear(), t.getMonth(), 1);
+  const thisMonthTo = new Date(t.getFullYear(), t.getMonth() + 1, 0);
+
+  const lastMonthFrom = new Date(t.getFullYear(), t.getMonth() - 1, 1);
+  const lastMonthTo = new Date(t.getFullYear(), t.getMonth(), 0);
+
+  return [
+    { key: 'last7',     label: `Последние 7 дней (${fmtShort(last7From)} – ${fmtShort(t)})`,                                       from: last7From,    to: t },
+    { key: 'last30',    label: `Последние 30 дней (${fmtShort(last30From)} – ${fmtShort(t)})`,                                     from: last30From,   to: t },
+    { key: 'thisWeek',  label: `Эта неделя (нед. ${isoWeek(t)}, ${fmtShort(thisWeekFrom)} – ${fmtShort(thisWeekTo)})`,             from: thisWeekFrom, to: thisWeekTo },
+    { key: 'lastWeek',  label: `Прошлая неделя (нед. ${isoWeek(lastWeekFrom)}, ${fmtShort(lastWeekFrom)} – ${fmtShort(lastWeekTo)})`, from: lastWeekFrom, to: lastWeekTo },
+    { key: 'thisMonth', label: `Этот месяц (${MONTHS_FULL[t.getMonth()]} ${t.getFullYear()})`,                                     from: thisMonthFrom,to: thisMonthTo },
+    { key: 'lastMonth', label: `Прошлый месяц (${MONTHS_FULL[lastMonthFrom.getMonth()]} ${lastMonthFrom.getFullYear()})`,          from: lastMonthFrom,to: lastMonthTo },
+  ];
+}
+
 function App() {
   const [activePage, setActivePage] = useState('overview');
   const [selectedLine, setSelectedLine] = useState('Все линии');
   const [selectedShift, setSelectedShift] = useState('Все смены');
   const [selectedSKU, setSelectedSKU] = useState('Все SKU');
-  const [selectedPeriod, setSelectedPeriod] = useState('Последние 7 дней');
+  const [selectedPeriodKey, setSelectedPeriodKey] = useState('last7');
   const [theme, setTheme] = useState('dark');
 
-  const filteredData = mockData.filter(r => {
-    if (selectedLine !== 'Все линии' && r.line !== selectedLine) return false;
-    if (selectedShift !== 'Все смены' && r.shift !== selectedShift) return false;
-    if (selectedSKU !== 'Все SKU' && r.sku !== selectedSKU) return false;
-    return true;
-  });
+  const periodOptions = useMemo(() => buildPeriodOptions(new Date()), []);
+  const currentPeriod = periodOptions.find(p => p.key === selectedPeriodKey) || periodOptions[0];
+
+  const filteredData = useMemo(() => {
+    const fromIso = isoLocal(currentPeriod.from);
+    const toIso = isoLocal(currentPeriod.to);
+    return mockData.filter(r => {
+      if (r.date < fromIso || r.date > toIso) return false;
+      if (selectedLine !== 'Все линии' && r.line !== selectedLine) return false;
+      if (selectedShift !== 'Все смены' && r.shift !== selectedShift) return false;
+      if (selectedSKU !== 'Все SKU' && r.sku !== selectedSKU) return false;
+      return true;
+    });
+  }, [currentPeriod, selectedLine, selectedShift, selectedSKU]);
 
   return (
     <div className={`app ${theme}`}>
@@ -85,9 +150,21 @@ function App() {
             <p>Сводная аналитика эффективности производства</p>
           </div>
           <div className="topbar-filters">
-            <select value={selectedPeriod} onChange={e => setSelectedPeriod(e.target.value)}>
-              <option>Последние 7 дней</option>
-              <option>Последние 30 дней</option>
+            <select
+              value={selectedPeriodKey}
+              onChange={e => setSelectedPeriodKey(e.target.value)}
+              style={{ minWidth: 280 }}
+            >
+              <optgroup label="Скользящее окно">
+                {periodOptions.filter(p => p.key === 'last7' || p.key === 'last30').map(p => (
+                  <option key={p.key} value={p.key}>{p.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Календарные периоды">
+                {periodOptions.filter(p => p.key !== 'last7' && p.key !== 'last30').map(p => (
+                  <option key={p.key} value={p.key}>{p.label}</option>
+                ))}
+              </optgroup>
             </select>
             <select value={selectedShift} onChange={e => setSelectedShift(e.target.value)}>
               <option>Все смены</option>
@@ -110,7 +187,7 @@ function App() {
 
         <div className="content">
           <Alerts />
-          <KPICards data={mockData} selectedLine={selectedLine} selectedShift={selectedShift} />
+          <KPICards data={filteredData} selectedLine={selectedLine} selectedShift={selectedShift} />
 
           <div style={sectionLabelStyle}>OEE по линиям — A / P / Q</div>
           <div style={gridStyle}>
@@ -135,8 +212,8 @@ function App() {
 
           <LossPareto data={filteredData} />
           <PeriodComparison data={mockData} />
-          <Heatmap data={mockData} />
-          <AIPanel data={filteredData} />
+          <Heatmap data={filteredData} />
+          <AIPanel data={filteredData} periodLabel={currentPeriod.label} />
           <Simulator data={filteredData} />
           <FinancialBlock data={filteredData} />
         </div>

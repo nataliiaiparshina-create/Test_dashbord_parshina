@@ -6,6 +6,26 @@ const plannedSpeed = { 'Линия А': 120, 'Линия Б': 100, 'Линия �
 const plannedOutput = 480;
 const TARGET_OEE = 0.85;
 
+// Скользящее окно: 30 последних дней по сегодняшний день включительно.
+// dayIndex = 0..29, где 29 = сегодня, 0 = 29 дней назад.
+const TOTAL_DAYS = 30;
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+
+function dateForDayIndex(dayIndex) {
+  const d = new Date(TODAY);
+  d.setDate(TODAY.getDate() - (TOTAL_DAYS - 1 - dayIndex));
+  return d;
+}
+
+function isoDate(d) {
+  // Локальная дата без сдвига часового пояса
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -14,8 +34,11 @@ function generateRecord(line, shift, sku, dayIndex) {
   const isNight = shift === 'Ночная';
   const isLineC = line === 'Линия В';
   const isInjection = sku === 'Инъекции 10мл';
+  // «Неделя-3» (поломка на Линии В) — теперь это середина окна, дни 14–20 от начала окна.
   const isWeek3 = dayIndex >= 14 && dayIndex <= 20;
-  const isFridayNight = dayIndex % 7 === 4 && isNight;
+  // «Пятница ночью» — определяем по реальному дню недели.
+  const recordDate = dateForDayIndex(dayIndex);
+  const isFridayNight = recordDate.getDay() === 5 && isNight;
 
   let downtime = randomBetween(20, 60);
   if (isNight) downtime += randomBetween(15, 30);
@@ -54,7 +77,7 @@ function generateRecord(line, shift, sku, dayIndex) {
 
   return {
     line, shift, sku,
-    date: new Date(2026, 3, dayIndex + 1).toISOString().split('T')[0],
+    date: isoDate(recordDate),
     dayIndex,
     plannedSpeed: plannedSpeed[line],
     actualSpeed: Math.round(actualSpeed),
@@ -73,7 +96,7 @@ function generateRecord(line, shift, sku, dayIndex) {
 }
 
 const records = [];
-for (let day = 0; day < 30; day++) {
+for (let day = 0; day < TOTAL_DAYS; day++) {
   for (const line of lines) {
     for (const shift of shifts) {
       for (const sku of skus) {

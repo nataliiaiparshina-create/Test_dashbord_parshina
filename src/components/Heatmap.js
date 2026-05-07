@@ -12,7 +12,8 @@ function getColor(oee) {
 }
 
 export default function Heatmap({ data }) {
-  const dates = [...new Set(data.map(r => r.date))].sort().slice(-7);
+  // Берём ВСЕ дни из переданных данных (фильтрация по периоду — на уровне App.js).
+  const dates = [...new Set(data.map(r => r.date))].sort();
 
   const getOEE = (line, shift, date) => {
     const records = data.filter(r => r.line === line && r.shift === shift && r.date === date);
@@ -22,33 +23,39 @@ export default function Heatmap({ data }) {
 
   const formatDate = date => {
     const d = new Date(date);
-    return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth()+1).toString().padStart(2, '0')}`;
+    return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}`;
   };
+
+  // Если дней много — ужимаем колонки по ширине, чтобы таблица не разъезжалась.
+  const cellMinWidth = dates.length > 14 ? 32 : 44;
 
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 14, padding: 16, border: '1px solid var(--border)', marginBottom: 20 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>OEE по дням и сменам (Heatmap)</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>OEE по дням и сменам (Heatmap)</div>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{dates.length} дн.</div>
+      </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 4, width: '100%' }}>
           <thead>
             <tr>
-              <th style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'left', paddingRight: 8, fontWeight: 400 }}>Смена / День</th>
+              <th style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'left', paddingRight: 8, fontWeight: 400, whiteSpace: 'nowrap' }}>Линия / Смена</th>
               {dates.map(date => (
-                <th key={date} style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400, textAlign: 'center', minWidth: 44 }}>
+                <th key={date} style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400, textAlign: 'center', minWidth: cellMinWidth }}>
                   {formatDate(date)}
                 </th>
               ))}
-              <th style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400, textAlign: 'center' }}>Среднее</th>
+              <th style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400, textAlign: 'center', paddingLeft: 8 }}>Среднее</th>
             </tr>
           </thead>
           <tbody>
             {LINES.map(line => SHIFTS.map(shift => {
-              const values = dates.map(date => getOEE(line, shift, date)).filter(Boolean);
+              const values = dates.map(date => getOEE(line, shift, date)).filter(v => v != null);
               const avg = values.length ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : null;
               return (
                 <tr key={`${line}-${shift}`}>
                   <td style={{ fontSize: 11, color: 'var(--text-secondary)', paddingRight: 8, whiteSpace: 'nowrap' }}>
-                    {line} {shift === 'Утренняя' ? 'Дневная' : shift === 'Дневная' ? 'Дневная' : 'Ночная'}
+                    {line} · {shift}
                   </td>
                   {dates.map(date => {
                     const val = getOEE(line, shift, date);
@@ -67,7 +74,7 @@ export default function Heatmap({ data }) {
                       </td>
                     );
                   })}
-                  <td style={{ textAlign: 'center' }}>
+                  <td style={{ textAlign: 'center', paddingLeft: 8 }}>
                     <div style={{
                       background: avg ? getColor(avg) : 'var(--surface2)',
                       borderRadius: 4,
