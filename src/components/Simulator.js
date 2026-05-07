@@ -2,32 +2,75 @@ import React, { useState } from 'react';
 
 const PARAMS = ['Доступность (A)', 'Производительность (P)', 'Качество (Q)'];
 
+// Коэффициенты влияния на выпуск и экономический эффект по типу улучшения.
+// Логика обоснования:
+//  - A (Доступность): рост = пропорциональный рост времени работы → базовый эффект 1.0/1.0.
+//  - P (Производительность): быстрее цикл → больше выпуска, но износ оборудования и риск
+//    качества снижают чистый ₽-эффект ~ на 15%.
+//  - Q (Качество): прибавка = меньше брака. В штуках прирост выпуска меньше (брак был и так
+//    невелик), НО каждая отбракованная упаковка уже несёт затраты на сырьё, труд и утилизацию.
+//    В фарм-индустрии стоимость брака обычно в 1.3–1.5 раза выше валовой выручки за единицу
+//    из-за затрат на расследование, утилизацию по GMP и регуляторных рисков → берём 1.4×.
+const COEFFS = {
+  'Доступность (A)':         { output: 1.0, money: 1.0  },
+  'Производительность (P)':  { output: 1.0, money: 0.85 },
+  'Качество (Q)':            { output: 0.6, money: 1.4  },
+};
+
+const BASE_OUTPUT_PER_PP = 2500;    // ед. на 1 п.п. прироста OEE
+const BASE_MONEY_PER_PP  = 380000;  // ₽ на 1 п.п. прироста OEE
+
+// Чистая функция расчёта — экспортируется для юнит-тестов.
+export function calculateSimulation({ data, param, percent }) {
+  if (!data || data.length === 0) return null;
+
+  // Средние как доли (0..1), без раннего округления
+  const avgA = data.reduce((s, r) => s + r.A, 0) / data.length;
+  const avgP = data.reduce((s, r) => s + r.P, 0) / data.length;
+  const avgQ = data.reduce((s, r) => s + r.Q, 0) / data.length;
+
+  const oldOEE = avgA * avgP * avgQ;
+
+  const delta = percent / 100;
+  const newA = param === 'Доступность (A)'         ? Math.min(avgA + delta, 1) : avgA;
+  const newP = param === 'Производительность (P)'  ? Math.min(avgP + delta, 1) : avgP;
+  const newQ = param === 'Качество (Q)'            ? Math.min(avgQ + delta, 1) : avgQ;
+
+  const newOEE = newA * newP * newQ;
+  const gain = newOEE - oldOEE;     // доля, например 0.0432
+  const gainPP = gain * 100;        // в процентных пунктах
+
+  const c = COEFFS[param] || COEFFS['Доступность (A)'];
+  const extraOutput    = Math.round(gainPP * BASE_OUTPUT_PER_PP * c.output);
+  const economicEffect = Math.round(gainPP * BASE_MONEY_PER_PP  * c.money);
+
+  return {
+    newOEE: Math.round(newOEE * 100),
+    gain: +gainPP.toFixed(1),
+    extraOutput,
+    economicEffect,
+  };
+}
+
 export default function Simulator({ data }) {
-  const avgOEE = Math.round(data.reduce((s, r) => s + r.OEE, 0) / data.length * 100);
   const [param, setParam] = useState('Доступность (A)');
   const [percent, setPercent] = useState(5);
   const [result, setResult] = useState(null);
 
   const calculate = () => {
-    const avgA = Math.round(data.reduce((s, r) => s + r.A, 0) / data.length * 100);
-const avgP = Math.round(data.reduce((s, r) => s + r.P, 0) / data.length * 100);
-const avgQ = Math.round(data.reduce((s, r) => s + r.Q, 0) / data.length * 100);
-const newA = param === 'Доступность (A)' ? Math.min(avgA + percent, 100) / 100 : avgA / 100;
-const newP = param === 'Производительность (P)' ? Math.min(avgP + percent, 100) / 100 : avgP / 100;
-const newQ = param === 'Качество (Q)' ? Math.min(avgQ + percent, 100) / 100 : avgQ / 100;
-const newOEEValue = Math.round(newA * newP * newQ * 100);
-const gain = newOEEValue - avgOEE;
-    const newOEE = newOEEValue;
-    const extraOutput = Math.round(gain * 2500);
-   const economicEffect = Math.round(gain * 380000);
-    setResult({ newOEE, extraOutput, economicEffect, gain });
+    setResult(calculateSimulation({ data, param, percent }));
   };
+
+  const avgOEEDisplay = data && data.length
+    ? Math.round(data.reduce((s, r) => s + r.OEE, 0) / data.length * 100)
+    : 0;
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid rgba(108,143,255,0.25)', borderRadius: 14, padding: 20, marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(108,143,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎯</div>
         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Симулятор "Что если"</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-tertiary)' }}>Текущий OEE: {avgOEEDisplay}%</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 20 }}>

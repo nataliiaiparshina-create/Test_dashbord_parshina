@@ -12,6 +12,21 @@ import FinancialBlock from './components/FinancialBlock';
 import ExportButton from './components/ExportButton';
 import { mockData, LINES, SHIFTS, SKUS } from './data/mockData';
 
+const sectionLabelStyle = {
+  fontSize: 12,
+  color: 'var(--text-tertiary)',
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+  marginBottom: 10,
+};
+
+const gridStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
+  gap: 10,
+  marginBottom: 20,
+};
+
 function App() {
   const [activePage, setActivePage] = useState('overview');
   const [selectedLine, setSelectedLine] = useState('Все линии');
@@ -97,27 +112,22 @@ function App() {
           <Alerts />
           <KPICards data={mockData} selectedLine={selectedLine} selectedShift={selectedShift} />
 
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-            OEE по линиям — A / P / Q
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+          <div style={sectionLabelStyle}>OEE по линиям — A / P / Q</div>
+          <div style={gridStyle}>
             {LINES.map(line => (
               <DonutChart key={line} line={line} data={filteredData} />
             ))}
           </div>
 
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
-  OEE по сменам — A / P / Q
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-  {SHIFTS.map(shift => (
-    <DonutChart key={shift} line={shift} data={filteredData} />
-  ))}
-</div>
-            OEE по SKU — A / P / Q
+          <div style={sectionLabelStyle}>OEE по сменам — A / P / Q</div>
+          <div style={gridStyle}>
+            {SHIFTS.map(shift => (
+              <DonutChart key={shift} line={shift} data={filteredData} />
+            ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+
+          <div style={sectionLabelStyle}>OEE по SKU — A / P / Q</div>
+          <div style={gridStyle}>
             {SKUS.map(sku => (
               <DonutChart key={sku} line={sku} data={filteredData} />
             ))}
