@@ -37,7 +37,7 @@ export default function AIPanel({ data }) {
     setLoading(false);
   };
 
-  useEffect(() => { analyze(); }, []);
+useEffect(() => { analyze(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{
